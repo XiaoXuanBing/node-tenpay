@@ -59,16 +59,7 @@ const config = {
   notify_url: '支付回调网址',
   spbill_create_ip: 'IP地址'
 };
-// 方式一
-const api = new tenpay(config);
-// 方式二
-const api = tenpay.init(config);
-
-// 调试模式(传入第二个参数为true, 可在控制台输出数据)
-const api = new tenpay(config, true);
-
-// 沙盒模式(用于微信支付验收)
-const sandboxAPI = await tenpay.sandbox(config);
+const api = tenpay.payment(config);
 ```
 
 #### config说明:
@@ -78,6 +69,7 @@ const sandboxAPI = await tenpay.sandbox(config);
 - `pfx` - 证书文件(选填, 在微信商户管理界面获取)
   - 当不需要调用依赖证书的API时可不填此参数
   - 若业务流程中使用了依赖证书的API则需要在初始化时传入此参数
+- `APIv3Key` - APIv3密钥
 - `notify_url` - 支付结果通知回调地址(选填)
   - 可以在初始化的时候传入设为默认值, 不传则需在调用相关API时传入
   - 调用相关API时传入新值则使用新值
@@ -101,25 +93,26 @@ const sandboxAPI = await tenpay.sandbox(config);
 
 #### Express中使用
 ```javascript
+const tenpay = require('tenpay');
+const config = {
+  appid: '公众号ID',
+  mchid: '微信商户号',
+  partnerKey: '微信支付安全密钥'
+};
+const middleware = tenpay.middleware(config);
+
+// 需要处理bodyParser接收xml类型
 app.use(bodyParser.text({type: '*/xml'}));
 
-// 支付结果通知/退款结果通知
-router.post('/xxx', api.middlewareForExpress('pay'), (req, res) => {
+// 支付结果通知
+router.post('/xxx', middleware['pay/refund/native'], (req, res) => {
   let info = req.weixin;
-
   // 业务逻辑...
 
   // 回复消息(参数为空回复成功, 传值则为错误消息)
   res.reply('错误消息' || '');
-});
 
-// 扫码支付模式一回调
-router.post('/xxx', api.middlewareForExpress('nativePay'), (req, res) => {
-  let info = req.weixin;
-
-  // 业务逻辑和统一下单获取prepay_id...
-
-  // 响应成功或失败(第二个可选参数为输出错误信息)
+  // 响应成功或失败(第二个可选参数为输出错误信息, 仅navtive模式包含该方法)
   res.replyNative(prepay_id, err_msg);
 });
 ```
